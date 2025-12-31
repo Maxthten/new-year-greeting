@@ -1,0 +1,2669 @@
+---
+// src/pages/newyear.astro
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026新年祝福</title>
+    
+    <script is:inline src="/scripts/lz-string.min.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Microsoft YaHei', sans-serif; touch-action: none; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        
+        /* ============================================================ */
+        /* ====== 开场动画层 (Intro Layer) ====== */
+        /* ============================================================ */
+        #intro-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000;
+            z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 24px; letter-spacing: 4px; font-weight: 300;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 1s;
+        }
+        
+        .breathing {
+            animation: breathe 3s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); text-shadow: 0 0 15px rgba(255,255,255,0.5); }
+            100% { opacity: 0.3; transform: scale(0.95); }
+        }
+
+        .error-style {
+            color: #ff3333;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            line-height: 1.5;
+        }
+
+        /* ============================================================ */
+        /* ====== UI层 UI Layer (Input) ====== */
+        /* ============================================================ */
+        #ui-layer {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center; z-index: 10;
+            transition: opacity 0.5s;
+            width: 100%;
+            pointer-events: auto;
+            opacity: 0; 
+            display: none;
+        }
+        
+        input {
+            padding: 15px 20px; font-size: 18px; border-radius: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.3); 
+            background: rgba(0,0,0,0.8);
+            color: white; outline: none; text-align: center; width: 60%; max-width: 300px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+        
+        button {
+            padding: 12px 50px; font-size: 18px;
+            border-radius: 30px; border: none; background: linear-gradient(45deg, #ff4d4d, #ff8c00);
+            color: white; cursor: pointer; font-weight: bold;
+            box-shadow: 0 0 20px rgba(255, 77, 77, 0.5);
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+
+        #disclaimer {
+            margin-top: 25px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.3);
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+        }
+        
+        #hint {
+            position: absolute; bottom: 10%; width: 100%;
+            text-align: center; color: rgba(255,255,255,0.6); font-size: 14px;
+            pointer-events: none; opacity: 0; transition: opacity 1s;
+            letter-spacing: 2px;
+        }
+
+        #touch-hint {
+            position: absolute;
+            bottom: 12%; 
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s;
+            letter-spacing: 1px;
+            z-index: 19;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        /* ============================================================ */
+        /* ====== Control Buttons Layer ====== */
+        /* ============================================================ */
+        #controls-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20;
+            opacity: 1; 
+            transition: opacity 1.5s;
+            pointer-events: none;
+        }
+
+        .control-btn {
+            pointer-events: auto;
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s;
+            text-decoration: none;
+            box-shadow: none; 
+            background-image: none; 
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap; 
+        }
+        
+        .initially-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out; 
+        }
+        
+        #btn-auto, #btn-blog, #btn-share {
+            position: absolute;
+        }
+
+        .reveal-btn {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.4); 
+        }
+
+        .control-btn.active {
+            background: rgba(255, 165, 0, 0.25); 
+            border-color: rgba(255, 190, 80, 0.7);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); 
+        }
+
+        /* ============================================================ */
+        /* ====== 分享留言弹窗样式 (Share Modal)  ====== */
+        /* ============================================================ */
+        #share-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 200;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+
+        #share-overlay.show {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .share-box {
+            width: 85%; max-width: 400px;
+            background: rgba(30, 30, 30, 0.9); /* 加深一点背景 */
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            color: #fff;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        #share-overlay.show .share-box {
+            transform: scale(1);
+        }
+
+        .close-btn {
+            position: absolute; top: 15px; right: 20px;
+            font-size: 24px; color: rgba(255,255,255,0.5);
+            cursor: pointer; font-family: sans-serif;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: #fff; }
+
+        .share-title {
+            margin: 0 0 15px 0; font-size: 18px; letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .share-desc {
+            font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 15px; line-height: 1.4;
+        }
+
+        /* 两个输入框的样式 */
+        .share-input-group {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .share-label {
+            font-size: 12px; color: rgba(255,255,255,0.6); margin-left: 5px; margin-bottom: 5px; display: block;
+        }
+        .share-input-area {
+            width: 100%; box-sizing: border-box;
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px; color: #fff; padding: 10px;
+            font-size: 15px; font-family: inherit;
+            resize: none; 
+            outline: none;
+        }
+        .share-input-area:focus { border-color: rgba(255,255,255,0.5); }
+
+        .modal-btn {
+            padding: 8px 25px; border-radius: 20px; font-size: 14px;
+            cursor: pointer; border: none; font-weight: bold; color: white;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+        .btn-gen { background: linear-gradient(45deg, #ff8c00, #ff4d4d); box-shadow: 0 0 10px rgba(255,77,77,0.3); }
+        .modal-btn:active { transform: scale(0.95); }
+
+        .result-container {
+            display: none;
+            margin-top: 20px; padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .result-column {
+            display: flex; flex-direction: column; gap: 8px; align-items: center;
+        }
+        .link-output {
+            width: 100%; 
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: rgba(255,255,255,0.9);
+            padding: 10px; font-size: 12px; outline: none;
+            word-break: break-all;
+            height: auto;
+            text-align: left;
+        }
+        .copy-hint-text {
+            font-size: 12px; color: rgba(255,255,255,0.4);
+        }
+
+        /* ============================================================ */
+        /* ====== Volume Control (Vertical) ====== */
+        /* ============================================================ */
+        .volume-container {
+            position: absolute;
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1; 
+            z-index: 25;
+        }
+
+        #volume-trigger-btn {
+            width: 40px; height: 36px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 18px; padding: 0;
+        }
+
+        #volume-panel-vertical {
+            position: absolute;
+            bottom: 50px; left: 50%;
+            transform: translateX(-50%) translateY(20px) scale(0.9); 
+            width: 140px; height: 140px; 
+            background: transparent; 
+            display: flex; flex-direction: row; 
+            align-items: flex-end; justify-content: center; 
+            gap: 20px; padding-bottom: 10px;
+            opacity: 0; pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+        }
+
+        #volume-panel-vertical.show {
+            opacity: 1; transform: translateX(-50%) translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .vol-slider-wrap {
+            height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end; width: 30px;
+        }
+
+        .vol-icon-small {
+            font-size: 12px; color: rgba(255,255,255,0.8);
+            margin-top: 10px; text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+
+        .range-holder {
+            width: 30px; height: 100px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        input[type=range].vertical-range-transform {
+            -webkit-appearance: none; width: 100px; height: 20px;
+            background: transparent; transform: rotate(-90deg);
+            outline: none; cursor: pointer;
+        }
+
+        input[type=range].vertical-range-transform::-webkit-slider-runnable-track {
+            width: 100%; height: 2px; background: rgba(255, 255, 255, 0.3); border-radius: 1px; border: none;
+        }
+
+        input[type=range].vertical-range-transform::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px;
+            border-radius: 50%; background: #ffffff;
+            margin-top: -6px; box-shadow: 0 0 5px rgba(0,0,0,0.3); border: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="intro-layer">
+        <div id="intro-text" class="breathing"></div>
+    </div>
+
+    <div id="ui-layer">
+        <input type="text" id="nameInput" placeholder="请输入你的名字" maxlength="12" oninput="filterInput(this)">
+        <br>
+        <button onclick="startShow()">开启 2026</button>
+        <div id="disclaimer"></div>
+    </div>
+
+    <div id="hint">点击屏幕继续...</div>
+
+    <div id="touch-hint">戳戳屏幕有惊喜</div>
+
+    <div id="controls-layer">
+        <button class="control-btn initially-hidden" id="btn-auto" onclick="toggleAutoFire()">自动放烟花: 关</button>
+        
+        <button class="control-btn initially-hidden" id="btn-share" onclick="openShareModal()">戳我留言</button>
+
+        <div class="volume-container">
+            <div id="volume-panel-vertical">
+                <div class="vol-slider-wrap">
+                    <div class="range-holder">
+                        <input type="range" class="vertical-range-transform" min="0" max="1" step="0.01" value="0.5" id="sfx-slider" oninput="updateSfxVolume(this.value)">
+                    </div>
+                    <span class="vol-icon-small">💥</span>
+                </div>
+                <div class="vol-slider-wrap">
+                    <div class="range-holder">
+                        <input type="range" class="vertical-range-transform" min="0" max="1" step="0.01" value="0.5" id="bgm-slider" oninput="updateBgmVolume(this.value)">
+                    </div>
+                    <span class="vol-icon-small">🎵</span>
+                </div>
+            </div>
+            <button class="control-btn" id="volume-trigger-btn" onclick="toggleVolumePanel()">🔊</button>
+        </div>
+
+        <button class="control-btn initially-hidden" id="btn-blog" onclick="goBlog()">访问我的博客</button>
+    </div>
+
+    <div id="share-overlay">
+        <div class="share-box">
+            <div class="close-btn" onclick="closeShareModal()">×</div>
+            <div class="share-title" id="share-title-text"></div>
+            <div class="share-desc" id="share-desc-text"></div>
+            
+            <div class="share-input-group">
+                <label class="share-label">对方的名字</label>
+                <input type="text" class="share-input-area" id="share-name-input" maxlength="12" placeholder="例如: Maxton" oninput="filterInput(this)">
+            </div>
+            
+            <div class="share-input-group">
+                <label class="share-label">想对TA说的话 (隐藏彩蛋)</label>
+                <textarea class="share-input-area" id="share-msg-input" rows="3" placeholder="在快速旋转圆环时才会出现哦..." oninput="filterInput(this)"></textarea>
+            </div>
+            
+            <button class="modal-btn btn-gen" onclick="generateShareLink()">生成链接</button>
+            
+            <div class="result-container" id="share-result">
+                <div class="result-column">
+                    <textarea class="link-output" id="share-link-output" rows="3" readonly></textarea>
+                    <span class="copy-hint-text">请长按上方链接手动复制</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script is:inline>
+        // ================= 自定义调整区 =================
+        // ======  输入内容过滤器 (禁止表情，只允许中英数+标点) ======
+        function filterInput(input) {
+            // 正则解释：
+            // ^                 : 取反（匹配不在以下范围内的字符）
+            // \u4e00-\u9fa5     : 常用汉字
+            // \x20-\x7E         : 所有ASCII字符 (包含 数字、字母、英文标点、空格)
+            // \u3000-\u303F     : CJK 标点符号 (如顿号、全角空格)
+            // \uFF00-\uFFEF     : 全角ASCII变体 (如全角逗号、句号、感叹号)
+            // \n                : 换行符 (允许 Textarea 换行)
+            const regex = /[^\u4e00-\u9fa5\x20-\x7E\u3000-\u303F\uFF00-\uFFEF\n]/g;
+            
+            // 如果发现了非法字符，直接替换为空
+            if (regex.test(input.value)) {
+                input.value = input.value.replace(regex, '');
+            }
+        }
+        const CONFIG = {
+            
+            // ============================================
+            // ====== [1. 核心与URL参数 (CORE & URL)] ======
+            // ============================================
+            urlConfig: {
+                // 是否启用URL传参功能
+                enabled: true,
+                // [名字] 参数名，例如 ?a=...
+                paramName: 'n',
+                // 是否自动填入输入框 (true=填入, false=不填)
+                autoFill: true,
+                // 当链接损坏/解压失败时显示的错误提示 (支持HTML)
+                errorText: "链接已损坏<br>请联系TA重新获取",
+                // 错误提示停留时间 (毫秒)
+                errorDuration: 1300
+            },
+
+            // 隐藏彩蛋 (SECRET MESSAGE) 配置
+            secret: {
+                // [密语] 参数名，例如 ?m=... (lz-string压缩)
+                paramNameMsg: 'm',
+                defaultText: "想给TA留下什么话呢？点击下方按钮生成链接... ", // 没有参数时，圆环显示的引导语
+                ringErrorText: "链接数据不完整 · 请检查链接或者联系TA · ",     // 链接出错时，圆环显示的错误语
+                
+                // 固定半径圆环配置 (Fixed Ring Logic)
+                // 解释：不管字多字少，圆环都这么大，像一个传送带一样滚动内容
+                ring: {
+                    // 圆环半径 (屏幕宽度的倍数)
+                    radiusMobile: 0.5,  
+                    radiusDesktop: 0.2,
+
+                    // 每一圈显示多少个字 (槽位数量)
+                    // 超过这个数量的字会变成“无限卷轴”效果
+                    slotsMobile: 20,
+                    slotsDesktop: 20
+                },
+
+                // 物理阈值配置 (根据旋转速度触发)
+                thresholds: {
+                    switch: 0.15,  // 达到这个速度触发切换 (单位: rad/frame)
+                    hint: 0.05,    // 达到这个速度开始提示“再快点”
+                    stop: 0.01     // 低于这个速度视为停下，显示按钮
+                },
+
+                // 提示语配置
+                hints: {
+                    start: "试试快速转动圆环...",
+                    faster: "再快一点！",
+                    revealed: "", // 揭晓后不显示提示，保持神秘
+                    // 当速度极快触发切换后，立刻显示的提示语
+                    slowDown: "魔法出现！请停止转动..."
+                },
+
+                // ====== 隐藏文字字体大小 ======
+                // 这里独立控制，不影响外面的 carouselMobile 等参数
+                font: {
+                    sizeMobile: 55,   // 手机端隐藏文字大小
+                    sizeDesktop: 120  // 电脑端隐藏文字大小
+                },
+                
+                // 远景淡出强度
+                // 数值越大，圆环背面消失得越快，防止穿帮
+                fadePower: 2.5
+            },
+
+            // ============================================
+            // ====== [2. 字体与个性化 (FONT)] ======
+            // ============================================
+            font: {
+                // 是否启用自定义字体？(false 则使用默认微软雅黑)
+                enabled: true, 
+                // 字体文件的 URL 地址 (支持 woff2, ttf, otf)
+                url: '/fonts/ZhanKuXiaoLOGOTi-2.otf', 
+                // 字体名称 (需在 CSS 或 JS 中引用的名字)
+                family: 'MyCustomFont'
+            },
+
+            // ============================================
+            // ====== [3. 交互与物理 (INTERACTION)] ======
+            // ============================================
+            interaction: {
+                // --- 底部 3D 圆环的惯性拖拽参数 ---
+                inertia: {
+                    // 拖拽灵敏度 (数值越大，手指动一点点圆环转得越快)
+                    dragSensitivity: 0.003,
+                    
+                    // 惯性摩擦力 (0.0 ~ 1.0)
+                    // 数值越小，松手后圆环停得越快；数值越大，惯性滑行越久
+                    friction: 0.99,
+                    
+                    // 自动恢复力 (0.0 ~ 1.0)
+                    // 松手后，圆环速度慢慢回归到默认 rotationSpeed 的速度
+                    // 数值越小，恢复得越慢（更丝滑）；数值越大，恢复得越快
+                    restoreSpeed: 0.01
+                }
+            },
+
+            // ============================================
+            // ====== [4. 文字内容配置 (TEXT CONTENT)] ======
+            // ============================================
+            
+            // 如果下面的 textLogic.randomize 为 false，则使用这些固定的词
+            transitionTexts: ["前程似锦", "学业有成","平安喜乐"],
+            carouselTexts: ["财源广进", "吉星高照", "心想事成", "一帆风顺", "未来可期"],
+
+            // 词汇库逻辑控制
+            textLogic: {
+                // 是否开启随机抽取？ 
+                // true = 每次刷新网页都从 pool 里随机选词覆盖上面的数组
+                // false = 使用上面固定的 transitionTexts 和 carouselTexts
+                randomize: true, 
+
+                // 随机抽取数量配置
+                transitionCount: 3, // 上面随机选3个
+                carouselCount: 5,   // 下面随机选5个
+
+                // 大词库 (Pool) - 你可以无限往这里加词
+                pool: [
+                    "前程似锦", "学业有成", "平安喜乐", "财源广进", "吉星高照", 
+                    "心想事成", "一帆风顺", "未来可期", "万事如意", "身体健康",
+                    "步步高升", "阖家幸福", "大展宏图", "金榜题名", "好运连连",
+                    "笑口常开", "日进斗金", "飞黄腾达", "诸事顺遂", "福星高照",
+                    "岁岁平安", "年年有余", "事业有成", "梦想成真"
+                ]
+            },
+
+            textColors: {
+                initialMode: 'gold', // 'gold', 'red', 'rainbow', 'white'
+                randomize: false      // 是否随机变色
+            },
+
+            // ============================================
+            // ====== [5. 字体与排版 (FONTS & LAYOUT)] ======
+            // ============================================
+            fontSizes: {
+                // [开场文字] (输入名字后的那个大字)
+                introMobile: 85,    // 手机端大小 (太大可能会超出屏幕)
+                introDesktop:200,   // 电脑端大小
+
+                // [最终页面] 上半部分的静态字
+                finalTitleMobile: 55,   // "祝"
+                finalTitleDesktop: 80,
+                
+                finalNameMobile: 90,    // 你的名字
+                finalNameDesktop: 130,
+                
+                finalYearMobile: 70,    // "2026"
+                finalYearDesktop: 100,
+                
+                // [最终页面] 底部旋转圆环的字
+                carouselMobile: 55, 
+                carouselDesktop: 100
+            },
+
+            // --- 3D 布局参数 ---
+            // [中心高度] 0=顶部, 0.5=屏幕正中间, 1=底部
+            centerYMobile: 0.53,    
+            centerYDesktop: 0.5,    
+            
+            // [圆环半径] 屏幕宽度的倍数。太大字会出屏幕，太小字挤在一起。
+            carouselRadiusRatioMobile: 0.45, 
+            carouselRadiusRatioDesktop: 0.2, 
+
+            // [俯视角度] 0=平视(一条线), 1=完全俯视(正圆)
+            tiltFactorMobile: 0.5,    
+            tiltFactorDesktop: 0.4,    
+            
+            // [透视感] 数值越小，近大远小的效果越夸张。
+            fovMobile: 1000,    
+            fovDesktop: 1400,
+
+            // ============================================
+            // ====== [6. 粒子系统设置 (PARTICLES)] ======
+            // ============================================
+            // 数值代表“每隔多少个像素取一个点”。
+            // 1 = 最密 (100% 还原), 1.5 = 适中, 2 = 稀疏
+            density: {
+                // 开场阶段
+                introMobile: 1.2,    // ★ 建议设置 1.3 ~ 1.6 之间
+                introDesktop: 2,
+                
+                // 最终阶段 (因为字多，建议比上面稍微大一点点，防止太乱)
+                finalMobile: 1.6,    // ★ 建议设置 2.0 ~ 2.5
+                finalDesktop: 3
+            },
+
+            // --- 视觉与发光控制 ---
+            visuals: {
+                // [全局发光] true: 开启暴力叠加模式，所有粒子都发光。
+                globalAdditive: false, 
+
+                // [呼吸高亮] true: 只有“正在闪烁”的粒子才开启高亮叠加。
+                twinkleAdditive: true,
+
+                // [基础亮度] 范围 0.1(暗) ~ 1.0(亮)。
+                alphaFactor: 0.8
+            },
+
+            // --- 粒子呼吸/闪烁参数 ---
+            twinkle: {
+                enabled: true,       // 总开关
+                probability: 0.9,    // 闪烁密度 (0.7 = 70% 的粒子会参与闪烁)
+                minOpacity: 0.1,     // [明暗对比度] 闪烁时最暗能到多少
+                maxOpacity: 1.0,     // 闪烁时最亮能到多少
+                speedMin: 0.03,      // 闪烁速度下限
+                speedMax: 0.06,      // 闪烁速度上限
+                
+                // [锐化系数] 1 = 平滑, 3 = 尖锐 (像星星)
+                sharpness: 2.5  
+            },
+
+            // ============================================
+            // ====== [7. 动画与物理 (ANIMATION)] ======
+            // ============================================
+            rotationSpeed: 0.004, // 底部圆环旋转速度 (默认自转速度)
+            particleEase: 0.05,    // 粒子飞行的刹车力度 (0.01=超慢, 0.1=超快)
+
+            // ============================================
+            // ====== [8. 背景与氛围 (BACKGROUND)] ======
+            // ============================================
+            background: {
+                enabled: true,       // 是否开启背景漂浮物
+                
+                // 样式选择: 'mix'(混合推荐), 'circle'(圆), 'cross'(十字), 'ring'(空心圈)
+                style: 'mix',
+
+                // 背景粒子数量
+                countMobile: 40,      
+                countDesktop: 80,
+
+                // 漂浮速度 (越小越慢，营造太空感)
+                speed: 0.3,            
+
+                // 粒子大小范围
+                sizeMin: 2.0,
+                sizeMax: 8.0,
+
+                // 颜色与透明度
+                color: '255, 255, 255', // RGB 颜色
+                opacity: 0.4            // 基础透明度
+            },
+
+            // ============================================
+            // ====== [9. 烟花系统配置 (FIREWORKS)] ======
+            // ============================================
+            fireworks: {
+                // 上升速度 (数值越大越快)
+                launchSpeedMobile: 3,
+                launchSpeedDesktop: 4,
+
+                // 上升时的抖动幅度 (模拟飞行不稳)
+                ascentWobble: 3, 
+
+                // 爆炸后粒子数量
+                explosionCountMobile: 60,
+                explosionCountDesktop: 120,
+
+                // 爆炸力度 (Spread)
+                explosionForce: 6,
+                
+                // 重力 (烟花下坠的感觉)
+                gravity: 0.05,
+                
+                // 阻力 (空气阻力，防止飞太远)
+                friction: 0.96,
+
+                // 粒子残留时间控制 (数值越小，消失越慢)
+                decayMin: 0.003,
+                decayMax: 0.008,
+
+                // --- 爆炸花样 ---
+                patterns: {
+                    // 爆炸形状控制：是否启用多种花样
+                    enabled: true, 
+
+                    // 爆炸范围缩放 (Scale)
+                    scaleMobile: 1.2,
+                    scaleDesktop: 1.5 
+                },
+
+                // --- 文字烟花 (核心功能) ---
+                textFireworks: {
+                    enabled: true,
+                    
+                    // 出现的概率 (0.3 表示 30% 的烟花会炸成文字)
+                    probability: 0.3, 
+
+                    // 祝福语列表 (炸开时随机选一个)
+                    words: ["福", "乐", "顺", "发", "吉", "安"],
+                    
+                    // 文字粒子的大小
+                    particleSizeMobile: 1.8,
+                    particleSizeDesktop: 2.5,
+
+                    // 文字炸开的范围大小
+                    explosionScaleMobile: 1.5,
+                    explosionScaleDesktop: 2.2,
+
+                    // 文字烟花的持续时间
+                    decaySpeed: 0.004,
+
+                    // 颜色控制模式: 'gold', 'random', 'fixed'
+                    colorMode: 'random', 
+                    
+                    // 当 colorMode 为 'fixed' 时生效
+                    fixedColor: '255, 255, 255'
+                },
+
+                // --- 尾烟配置 ---
+                smoke: {
+                    enabled: true,
+                    color: '180, 180, 180',
+                    sizeMobile: 1.5,
+                    sizeDesktop: 2.5,
+                    decaySpeed: 0.02,
+                    interval: 2,
+                    jitter: 0.5
+                }
+            },
+
+            // ============================================
+            // ====== [10. UI 与交互 (UI)] ======
+            // ============================================
+            ui: {
+                // 博客跳转链接
+                blogUrl: "https://zh.maxtonniu.com",
+
+                // 底部防误触区域高度 (px)
+                safeZoneHeightMobile: 100,
+                safeZoneHeightDesktop: 80,
+
+                // 提示语文字
+                touchHintText: "戳戳屏幕有惊喜",
+
+                // 免责声明内容配置
+                disclaimer: {
+                    text: "本网页基于纯静态前端，不会收集您任何输入的东西（我哪有这闲钱买服务器这东西）",
+                    color: "rgba(255, 255, 255, 0.4)",
+                    fontSize: "12px"
+                },
+
+                // 自动放烟花的参数
+                autoFire: {
+                    minInterval: 300,  // 最快多久放一次 (毫秒)
+                    maxInterval: 1200, // 最慢多久放一次 (毫秒)
+                    maxConcurrent: 3   // 每次并发最多放几个?
+                },
+
+                // ====== 留言分享功能 (SHARE) ======
+                share: {
+                    // 自定义生成链接的基础域名 (不输入时默认生成的域名)
+                    baseUrl: "http://zh.maxtonniu.com/newyear", 
+                    
+                    // 必须与上方 urlConfig.paramName 保持一致，这里是自动跟随的
+                    get paramName() { return CONFIG.urlConfig.paramName; },
+                    
+                    // 弹窗标题
+                    modalTitle: "定制你的祝福链接",
+                    
+                    // 提示说明文字
+                    modalDesc: "生成专属链接发给Ta。<br>如果填写了“隐藏彩蛋”，告诉Ta：<br><b>快速转动圆环，会有惊喜哦！</b>",
+                    
+                    // 按钮文字
+                    btnText: "戳我留言"
+                },
+
+                // ====== 按钮位置自定义配置 (BUTTON POSITIONS) ======
+                positions: {
+                    // --- 1. 自动烟花按钮 (Auto Fire Button) ---
+                    autoBtn: {
+                        mobile: {
+                            bottom: '4%',      // 距离底部
+                            left: '8%',        // 距离左侧
+                            top: null, right: null // 不用管
+                        },
+                        desktop: {
+                            bottom: '4%',
+                            left: '8%',
+                            top: null, right: null
+                        }
+                    },
+
+                    // --- 2. 返回博客按钮 (Back Blog Button) ---
+                    blogBtn: {
+                        mobile: {
+                            bottom: '4%',
+                            right: '10%',        // 距离右侧
+                            top: null, left: null
+                        },
+                        desktop: {
+                            bottom: '4%',
+                            right: '10%',
+                            top: null, left: null
+                        }
+                    },
+
+                    // --- 3. 音量控制按钮 (Volume Button) ---
+                    volumeBtn: {
+                        mobile: {
+                            bottom: '4%',
+                            left: '50%',        // 居中
+                            top: null, right: null
+                        },
+                        desktop: {
+                            bottom: '4%',
+                            left: '50%',
+                            top: null, right: null
+                        }
+                    },
+                    
+                    // --- 4. 分享留言按钮 (Share Button) ---
+                    // 默认放置在音量按钮的上方 (Bottom 15% 左右)
+                    shareBtn: {
+                        mobile: {
+                            bottom: '10%',      // 比音量按钮(4%)高
+                            left: '50%',        // 居中
+                            top: null, right: null
+                        },
+                        desktop: {
+                            bottom: '10%',
+                            left: '50%',
+                            top: null, right: null
+                        }
+                    }
+                }
+            },
+
+            // ============================================
+            // ====== [11. 音频与音乐 (AUDIO)] ======
+            // ============================================
+            sound: {
+                enabled: false,       // 烟花音效总开关 (建议由滑块控制)
+                volume: 0.5,         // 烟花音效全局初始音量 (0 ~ 1)
+                
+                // 资源路径定义
+                files: {
+                    lift: ['/audio/lift1.mp3', '/audio/lift2.mp3', '/audio/lift3.mp3'],
+                    burst: ['/audio/burst1.mp3', '/audio/burst2.mp3'],
+                    burstSmall: ['/audio/burst-sm-1.mp3', '/audio/burst-sm-2.mp3'],
+                    crackle: ['/audio/crackle1.mp3', '/audio/crackle-sm-1.mp3']
+                }
+            },
+
+            // 背景音乐配置 (BGM)
+            music: {
+                enabled: true,       // 背景音乐总开关
+                volume: 0.5,         // 背景音乐初始音量 (0 ~ 1)
+                
+                // 音乐文件列表 (请放在 public/audio/bgm/ 目录下)
+                // 刷新页面时会随机从这里选一首作为本次的 BGM
+                files: [
+                    '/audio/bgm/daoxiang.mp3',
+                    '/audio/bgm/xiyuanqian.mp3',
+                    '/audio/bgm/longjuanfeng.mp3'
+                ]
+            },
+
+            // ============================================
+            // ====== [12. 开场动画配置 (INTRO)] ======
+            // ============================================
+            intro: {
+                // 是否启用开场动画
+                enabled: true, 
+
+                // true = 无论多少次访问都显示; false = 第一次访问显示，之后刷新不显示
+                alwaysShow:false, 
+
+                // 开场显示的文字序列 (可自定义)
+                texts: ["建议开启声音<br>获得最佳体验", "Maxton 作品"],
+                
+                // 每个文字显示的停留时间 (毫秒)
+                duration: 2000, 
+                
+                // 淡入淡出的过渡时间 (毫秒)
+                fadeSpeed: 1000
+            }
+        };
+        // ===============================================
+
+        // 初始化词汇逻辑：如果开启随机，则覆盖原有的 transitionTexts 和 carouselTexts
+        function initTextLogic() {
+            if (CONFIG.textLogic.randomize && CONFIG.textLogic.pool.length > 0) {
+                // 1. 克隆并打乱大词库
+                const shuffled = [...CONFIG.textLogic.pool].sort(() => Math.random() - 0.5);
+                
+                // 2. 截取需要的数量
+                const tCount = CONFIG.textLogic.transitionCount;
+                const cCount = CONFIG.textLogic.carouselCount;
+                
+                // 防止数组越界
+                if (shuffled.length >= tCount + cCount) {
+                    CONFIG.transitionTexts = shuffled.slice(0, tCount);
+                    CONFIG.carouselTexts = shuffled.slice(tCount, tCount + cCount);
+                } else {
+                    console.warn("词汇库数量不足，无法完全随机，回退到默认设置");
+                }
+            }
+        }
+        // 立即执行词汇初始化
+        initTextLogic();
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d'); 
+        
+        // 应用 UI 配置位置 (这里稍后在 resize 中调用)
+        document.getElementById('touch-hint').innerText = CONFIG.ui.touchHintText;
+        
+        // 应用分享模块的文本配置
+        document.getElementById('btn-share').innerText = CONFIG.ui.share.btnText;
+        document.getElementById('share-title-text').innerText = CONFIG.ui.share.modalTitle;
+        document.getElementById('share-desc-text').innerHTML = CONFIG.ui.share.modalDesc; // 支持HTML换行
+        // 占位符不再全局统一，而是分开配置
+        // document.getElementById('share-input').placeholder = CONFIG.ui.share.placeholder; 
+
+        // 应用按钮自定义位置逻辑 (Apply Custom Button Positions)
+        function applyButtonPositions() {
+            const posCfg = CONFIG.ui.positions;
+            const mode = isMobile ? 'mobile' : 'desktop';
+
+            // 辅助函数：应用样式到元素
+            function setStyle(elemId, cfg) {
+                const el = document.getElementById(elemId);
+                if (!el) return;
+
+                // 重置所有定位
+                el.style.top = 'auto';
+                el.style.bottom = 'auto';
+                el.style.left = 'auto';
+                el.style.right = 'auto';
+                el.style.transform = 'none'; // 重置 transform
+                el.style.margin = '0';       // 重置 margin
+
+                // 应用新配置
+                if (cfg.top) el.style.top = cfg.top;
+                if (cfg.bottom) el.style.bottom = cfg.bottom;
+                if (cfg.left) el.style.left = cfg.left;
+                if (cfg.right) el.style.right = cfg.right;
+
+                // 特殊处理：如果 left 是 50%，自动加居中偏移
+                if (cfg.left === '50%') {
+                    el.style.transform = 'translateX(-50%)';
+                }
+            }
+
+            // 1. 自动烟花按钮
+            setStyle('btn-auto', posCfg.autoBtn[mode]);
+            
+            // 2. 返回博客按钮
+            setStyle('btn-blog', posCfg.blogBtn[mode]);
+            
+            // 3. 分享按钮
+            setStyle('btn-share', posCfg.shareBtn[mode]);
+
+            // 4. 音量容器 (注意：我们定位的是 .volume-container 类)
+            // 因为 volume-container 是 class，这里手动获取
+            const volContainer = document.querySelector('.volume-container');
+            if (volContainer) {
+                const vCfg = posCfg.volumeBtn[mode];
+                volContainer.style.top = 'auto'; volContainer.style.bottom = 'auto';
+                volContainer.style.left = 'auto'; volContainer.style.right = 'auto';
+                volContainer.style.transform = 'none';
+
+                if (vCfg.top) volContainer.style.top = vCfg.top;
+                if (vCfg.bottom) volContainer.style.bottom = vCfg.bottom;
+                if (vCfg.left) volContainer.style.left = vCfg.left;
+                if (vCfg.right) volContainer.style.right = vCfg.right;
+
+                if (vCfg.left === '50%') {
+                    volContainer.style.transform = 'translateX(-50%)';
+                }
+            }
+        }
+
+        // 应用免责声明内容
+        const disclaimerEl = document.getElementById('disclaimer');
+        disclaimerEl.innerText = CONFIG.ui.disclaimer.text;
+        disclaimerEl.style.color = CONFIG.ui.disclaimer.color;
+        disclaimerEl.style.fontSize = CONFIG.ui.disclaimer.fontSize;
+
+        let width, height, dpr;
+        let particles = []; 
+        let staticTopParticles = []; 
+        
+        //  渲染队列分离：正常模式和隐藏模式
+        let carouselGroups = [];       // 默认显示的词
+        
+        let charParticleCache = {};    // 缓存字符的点阵数据 {'A': [particles...]}
+        let normalizedSecretText = ""; // 处理后首尾相接的无限长文本
+        let secretSlotCount = 0;       // 隐藏模式下的槽位数量
+        
+        let renderQueue = [];
+        
+        // 背景粒子数组
+        let bgParticles = [];
+        
+        // 烟花相关数组
+        let fireworks = []; // 正在上升的火箭
+        let sparks = [];    // 爆炸后的火花
+        // 尾烟数组
+        let smokeParticles = [];
+
+        let isMobile = false;
+        let baseParticleSize = 1.8; 
+        let step = 0;
+        let userName = "";
+        let secretMessageText = null; // 存储解压后的隐藏文字
+        let isFinalState = false; 
+        let globalRotation = 0;
+
+        // 渲染状态控制 (NORMAL -> REVEALING -> SECRET)
+        let renderState = 'NORMAL'; 
+
+        // 惯性拖拽相关状态变量
+        const dragState = {
+            isDragging: false,
+            startX: 0,
+            lastX: 0,
+            velocity: 0 // 当前额外的拖拽速度（不包含基础自转）
+        };
+        
+        //  用于速度补偿的变量
+        let normalRingRadius = 0;
+        let secretRingRadius = 0;
+        let hasSwitchedRadius = false; // 标记是否执行过速度补偿
+
+        // 自动烟花相关
+        let autoFireTimer = null;
+        let isAutoFiring = false;
+        
+        // 提示语状态
+        let hasTouchedInFinal = false;
+
+        // ===============================================
+        // ====== [逻辑] 开场动画管理 ======
+        // ===============================================
+        
+        // 辅助函数：显示输入框 UI 层
+        function showUILayer() {
+            const introLayer = document.getElementById('intro-layer');
+            const uiLayer = document.getElementById('ui-layer');
+            
+            // 淡出开场层
+            introLayer.style.opacity = 0;
+            setTimeout(() => {
+                introLayer.style.display = 'none'; // 彻底隐藏
+                uiLayer.style.display = 'block';   // 显示输入框层
+                setTimeout(() => { uiLayer.style.opacity = 1; }, 50); // UI 淡入
+            }, CONFIG.intro.fadeSpeed);
+        }
+
+        // URL 参数检查与逻辑处理 - 双重检测 + 双重报错 + 错误不填入
+        function checkUrlAndProceed() {
+            // 1. 如果没开启功能，直接显示默认引导语并进入
+            if (!CONFIG.urlConfig.enabled) {
+                secretMessageText = CONFIG.secret.defaultText;
+                showUILayer();
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            // 获取原始参数字符串
+            const rawNameVal = urlParams.get(CONFIG.urlConfig.paramName);  // n
+            const rawMsgVal = urlParams.get(CONFIG.secret.paramNameMsg);   // m
+
+            // 2. 尝试解压名字
+            let decodedName = null;
+            if (rawNameVal) {
+                try {
+                    decodedName = LZString.decompressFromEncodedURIComponent(rawNameVal);
+                } catch (e) { console.error("Name decompress error", e); }
+            }
+
+            // 3. 尝试解压密语
+            let decodedMsg = null;
+            if (rawMsgVal) {
+                try {
+                    decodedMsg = LZString.decompressFromEncodedURIComponent(rawMsgVal);
+                } catch (e) { console.error("Msg decompress error", e); }
+            }
+
+            // ====== 核心判断逻辑 ======
+            
+            // 定义坏链接：(有参数n 但解压失败) 或者 (有参数m 但解压失败)
+            const isNameBad = (rawNameVal && !decodedName);
+            const isMsgBad = (rawMsgVal && !decodedMsg);
+
+            // 【分支一：只要有一个坏了 (n坏了 或 m坏了)，统统报错】
+            if (isNameBad || isMsgBad) {
+                
+                // A. 设置圆环文字为“错误提示” (满足：圆环提示链接损坏)
+                secretMessageText = CONFIG.secret.ringErrorText;
+
+                // B. 【满足：n出错不填入】
+                // 这里没有任何给 nameInput 赋值的代码，所以输入框保持空白。
+                // 即使 n 是好的但 m 坏了，为了安全起见，这里也不会自动填入，让用户手动输入更稳妥。
+
+                // C. 播放开场红色报错动画 (满足：开屏提示错误)
+                const introText = document.getElementById('intro-text');
+                const introLayer = document.getElementById('intro-layer');
+                
+                introText.style.opacity = 0;
+                
+                setTimeout(() => {
+                    introText.innerHTML = CONFIG.urlConfig.errorText;
+                    introText.className = "breathing error-style"; 
+                    introText.style.opacity = 1;
+                    
+                    introLayer.style.opacity = 1; 
+                    introLayer.style.display = 'flex';
+
+                    // 动画播放完毕后，进入 UI 层
+                    setTimeout(() => {
+                        showUILayer();
+                    }, CONFIG.urlConfig.errorDuration);
+                }, 500);
+
+            } 
+            // 【分支二：链接完全正常 或者 根本没参数】
+            else {
+                // 1. 只有在名字解压成功的情况下，才自动填入
+                if (decodedName && CONFIG.urlConfig.autoFill) {
+                    document.getElementById('nameInput').value = decodedName;
+                }
+
+                // 2. 决定圆环显示什么
+                if (decodedMsg) {
+                    // 有隐藏信息 -> 显示隐藏信息
+                    secretMessageText = decodedMsg;
+                } else {
+                    // 没隐藏信息 -> 显示默认引导语
+                    secretMessageText = CONFIG.secret.defaultText;
+                }
+
+                // 正常进入
+                showUILayer();
+            }
+        }
+ 
+        function runIntroSequence() {
+            const introLayer = document.getElementById('intro-layer');
+            const introText = document.getElementById('intro-text');
+            const uiLayer = document.getElementById('ui-layer');
+
+            // 1. 检查 LocalStorage 和配置
+            const hasSeen = localStorage.getItem('hasSeenIntro_2026');
+            
+            // 如果没开启，或者（不是强制一直显示 且 已经看过了），则跳过动画直接检查参数
+            if (!CONFIG.intro.enabled || (!CONFIG.intro.alwaysShow && hasSeen)) {
+                checkUrlAndProceed();
+                return;
+            }
+
+            // 标记已观看
+            localStorage.setItem('hasSeenIntro_2026', 'true');
+
+            // 2. 开始动画流程
+            let stepIndex = 0;
+            const texts = CONFIG.intro.texts;
+
+            function showNextText() {
+                if (stepIndex >= texts.length) {
+                    // 动画结束 -> 检查参数并决定后续
+                    checkUrlAndProceed();
+                    return;
+                }
+
+                // 切换文字
+                introText.style.opacity = 0; // 先隐
+                setTimeout(() => {
+                    introText.innerHTML = texts[stepIndex]; // 换字
+                    introText.style.opacity = 1; // 显
+                    
+                    // 停留一段时间后
+                    setTimeout(() => {
+                        stepIndex++;
+                        showNextText(); // 递归调用
+                    }, CONFIG.intro.duration);
+
+                }, CONFIG.intro.fadeSpeed / 2); // 文字切换的小间隙
+            }
+
+            showNextText();
+        }
+        
+        // ===============================================
+        // ====== 资源加载器 (字体 & 逻辑) ======
+        // ===============================================
+        async function loadGameResources() {
+            // 1. 加载字体（如果启用）
+            if (CONFIG.font.enabled && CONFIG.font.url) {
+                try {
+                    const customFont = new FontFace(CONFIG.font.family, `url(${CONFIG.font.url})`);
+                    await customFont.load();
+                    document.fonts.add(customFont);
+                    console.log("Custom font loaded:", CONFIG.font.family);
+                } catch (err) {
+                    console.warn("Font load failed, fallback to system font.", err);
+                }
+            }
+
+            // 2. 字体加载完毕后，再运行开场逻辑 (防止 measureText 测不准)
+            runIntroSequence();
+        }
+
+        // 页面加载完成后，先加载资源，再启动
+        window.addEventListener('load', loadGameResources);
+
+        // ===============================================
+        // ======背景音乐管理器 (Web Audio API) ======
+        // ===============================================
+        const bgmManager = {
+            ctx: null,
+            gainNode: null, // 音量控制节点
+            source: null,   // 音频源
+            buffer: null,   // 解码后的音频数据
+            isLoaded: false,
+            isPlaying: false,
+
+            init() {
+                if (!CONFIG.music.enabled || CONFIG.music.files.length === 0) return;
+                
+                // 1. 创建 AudioContext (兼容 Webkit)
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+
+                // 2. 创建 GainNode (音量旋钮)
+                this.gainNode = this.ctx.createGain();
+                // 设置初始音量
+                this.gainNode.gain.value = CONFIG.music.volume;
+                // 连接到最终输出 (扬声器)
+                this.gainNode.connect(this.ctx.destination);
+                
+                // 3. 随机选歌并加载
+                const randomSong = CONFIG.music.files[Math.floor(Math.random() * CONFIG.music.files.length)];
+                this.load(randomSong);
+            },
+
+            load(url) {
+                // 使用 fetch 获取音频文件 (ArrayBuffer)
+                fetch(url)
+                    .then(response => response.arrayBuffer())
+                    .then(arrayBuffer => this.ctx.decodeAudioData(arrayBuffer)) // 解码
+                    .then(decodedBuffer => {
+                        this.buffer = decodedBuffer;
+                        this.isLoaded = true;
+                    })
+                    .catch(e => console.error("BGM Load Error:", e));
+            },
+
+            play() {
+                if (!CONFIG.music.enabled || !this.isLoaded) return;
+                if (this.isPlaying) return; // 防止重音
+
+                // 必须先 Resume (iOS 策略)
+                this.resume();
+
+                // 创建 BufferSource
+                this.source = this.ctx.createBufferSource();
+                this.source.buffer = this.buffer;
+                this.source.loop = true; // 循环播放
+
+                // 关键：连接到 GainNode，而不是直接连 destination
+                this.source.connect(this.gainNode);
+                
+                this.source.start(0);
+                this.isPlaying = true;
+            },
+
+            setVolume(val) {
+                // 限制范围 0~1
+                const v = Math.max(0, Math.min(1, parseFloat(val)));
+                if (this.gainNode) {
+                    // 实时修改 GainNode 的值，iOS 无法拦截这个内部运算
+                    this.gainNode.gain.value = v;
+                }
+            },
+
+            resume() {
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+        };
+        // 立即初始化 BGM
+        bgmManager.init();
+
+        // ===============================================
+        // ====== 音效管理器 SoundManager ======
+        // ===============================================
+        const soundManager = {
+            ctx: null,
+            buffers: {}, // 缓存解码后的音频数据
+            sources: CONFIG.sound.files,
+            lastSmallBurstTime: 0, // 用于节流
+
+            // 初始化：尝试创建 AudioContext (需要用户交互后才能 resume)
+            init() {
+                // 注意：这里我们总是初始化 AudioContext，即使 enabled 暂时为 false，
+                // 因为用户可能通过 UI 滑块稍后开启声音。
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.preload();
+                } catch (e) {
+                    console.warn("Web Audio API not supported");
+                }
+            },
+
+            // 预加载所有音频资源
+            preload() {
+                if (!this.ctx) return;
+                // 遍历所有类别 (lift, burst, etc.)
+                for (const [key, urls] of Object.entries(this.sources)) {
+                    this.buffers[key] = [];
+                    urls.forEach(url => {
+                        fetch(url)
+                            .then(response => response.arrayBuffer())
+                            .then(arrayBuffer => this.ctx.decodeAudioData(arrayBuffer))
+                            .then(decodedBuffer => {
+                                this.buffers[key].push(decodedBuffer);
+                            })
+                            .catch(e => console.warn("Audio load failed:", url));
+                    });
+                }
+            },
+
+            // 交互解锁：浏览器通常要求用户点击后才能播放声音
+            resume() {
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            // 播放音效核心逻辑
+            playSound(type, scale = 1) {
+                // 如果开关没开，或者音量为0，就不播
+                if (!CONFIG.sound.enabled && CONFIG.sound.volume <= 0.01) return;
+                if (!CONFIG.sound.enabled && document.getElementById('sfx-slider').value <= 0) return;
+
+                if (!this.ctx) return;
+
+                // 检查资源是否加载完毕
+                const bufferList = this.buffers[type];
+                if (!bufferList || bufferList.length === 0) return;
+
+                // 防爆音节流 (仅针对小炸裂声)
+                if (type === 'burstSmall') {
+                    const now = Date.now();
+                    if (now - this.lastSmallBurstTime < 50) return; // 50ms 冷却
+                    this.lastSmallBurstTime = now;
+                }
+
+                // 随机选择一个样本
+                const buffer = bufferList[Math.floor(Math.random() * bufferList.length)];
+                
+                // 创建音源
+                const source = this.ctx.createBufferSource();
+                source.buffer = buffer;
+
+                // 创建音量控制
+                const gainNode = this.ctx.createGain();
+
+                // 物理模拟计算
+                let rate = 1.0;
+                let volume = CONFIG.sound.volume;
+
+                if (type === 'burst' || type === 'burstSmall') {
+                    // 速度范围 0.8 (低沉) ~ 1.5 (尖锐)
+                    rate = 1.5 - (scale * 0.5); 
+                    // 音量范围 
+                    volume = CONFIG.sound.volume * (0.3 + scale * 0.6);
+                }
+
+                // 限制边界
+                rate = Math.max(0.5, Math.min(rate, 2.0));
+                volume = Math.max(0.05, Math.min(volume, 1.5));
+
+                source.playbackRate.value = rate;
+                gainNode.gain.value = volume;
+
+                // 连接节点：Source -> Gain -> Destination
+                source.connect(gainNode);
+                gainNode.connect(this.ctx.destination);
+
+                source.start(0);
+            }
+        };
+
+        // 立即初始化音频系统
+        soundManager.init();
+
+        // 初始化背景粒子 (支持多种形状和旋转)
+        function initBackground() {
+            if (!CONFIG.background.enabled) return;
+            bgParticles = [];
+            const count = isMobile ? CONFIG.background.countMobile : CONFIG.background.countDesktop;
+            
+            for (let i = 0; i < count; i++) {
+                // 决定形状
+                let shapeType = 'circle';
+                if (CONFIG.background.style === 'mix') {
+                    const r = Math.random();
+                    if (r < 0.4) shapeType = 'circle';        // 40% 实心圆
+                    else if (r < 0.7) shapeType = 'ring';     // 30% 空心圈
+                    else shapeType = 'cross';                 // 30% 十字星
+                } else {
+                    shapeType = CONFIG.background.style;
+                }
+
+                bgParticles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: CONFIG.background.sizeMin + Math.random() * (CONFIG.background.sizeMax - CONFIG.background.sizeMin),
+                    // 随机速度向量 (-1 ~ 1) * speed
+                    vx: (Math.random() - 0.5) * CONFIG.background.speed,
+                    vy: (Math.random() - 0.5) * CONFIG.background.speed,
+                    // 随机透明度差异
+                    alphaFactor: 0.3 + Math.random() * 0.7,
+                    shape: shapeType,
+                    rotation: Math.random() * Math.PI, // 初始旋转角度
+                    rotSpeed: (Math.random() - 0.5) * 0.02 // 自转速度
+                });
+            }
+        }
+
+        // 更新并绘制背景 (支持样式绘制)
+        function updateAndDrawBackground() {
+            if (!CONFIG.background.enabled) return;
+            
+            ctx.fillStyle = `rgba(${CONFIG.background.color}, 1)`;
+            ctx.strokeStyle = `rgba(${CONFIG.background.color}, 1)`;
+            ctx.lineWidth = 1.5; // 线条粗细
+
+            bgParticles.forEach(p => {
+                // 移动
+                p.x += p.vx;
+                p.y += p.vy;
+                p.rotation += p.rotSpeed; // 自转
+                
+                // 边界循环 (出去了从另一边回来)
+                if (p.x < -50) p.x = width + 50;
+                if (p.x > width + 50) p.x = -50;
+                if (p.y < -50) p.y = height + 50;
+                if (p.y > height + 50) p.y = -50;
+                
+                // 绘制
+                ctx.globalAlpha = CONFIG.background.opacity * p.alphaFactor;
+                ctx.beginPath();
+                
+                if (p.shape === 'circle') {
+                    // 实心圆
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.shape === 'ring') {
+                    // 空心圈 (画稍微大一点点)
+                    ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (p.shape === 'cross') {
+                    // 十字星 (带旋转)
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation);
+                    const s = p.size * 1.5; 
+                    ctx.moveTo(-s, 0); ctx.lineTo(s, 0);
+                    ctx.moveTo(0, -s); ctx.lineTo(0, s);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
+            
+            // 重置透明度以免影响后续绘制
+            ctx.globalAlpha = 1;
+        }
+
+        function resize() {
+            // 限制 DPR 最大为 2，以减轻高分屏移动设备的 GPU 负担
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.scale(dpr, dpr);
+            isMobile = width < 768;
+            baseParticleSize = isMobile ? 1.6 : 2.0;
+
+            // 动态应用按钮位置
+            applyButtonPositions();
+
+            // 每次调整窗口大小时重置背景
+            initBackground();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function getRandomColor(type) {
+            if (type === 'rainbow') return `hsl(${Math.random() * 360}, 90%, 65%)`;
+            if (type === 'gold') return `hsl(${35 + Math.random() * 15}, 100%, 60%)`;
+            if (type === 'red') return `hsl(${340 + Math.random() * 20}, 100%, 60%)`;
+            if (type === 'white') return `hsl(0, 0%, 95%)`; 
+            return `hsl(45, 100%, 60%)`; 
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.tx = x;
+                this.ty = y;
+                this.relX = 0;
+                this.relY = 0;
+                this.color = getRandomColor('gold'); 
+                this.alpha = 1;
+
+                this.isTwinkler = CONFIG.twinkle.enabled && (Math.random() < CONFIG.twinkle.probability);
+                this.twinklePhase = Math.random() * Math.PI * 2;
+                this.twinkleSpeed = CONFIG.twinkle.speedMin + Math.random() * (CONFIG.twinkle.speedMax - CONFIG.twinkle.speedMin);
+            }
+
+            update() {
+                this.x += (this.tx - this.x) * CONFIG.particleEase;
+                this.y += (this.ty - this.y) * CONFIG.particleEase;
+                
+                if (this.isTwinkler) {
+                    this.twinklePhase += this.twinkleSpeed;
+                }
+            }
+
+            draw(scale = 1, forceX = null, forceY = null, baseAlpha = 1) {
+                let currentAlpha = this.alpha * baseAlpha;
+
+                // 锐化的呼吸算法
+                if (this.isTwinkler) {
+                    const rawSin = Math.sin(this.twinklePhase);
+                    const normalizedWave = (rawSin + 1) / 2;
+                    const sharpWave = Math.pow(normalizedWave, CONFIG.twinkle.sharpness);
+                    const range = CONFIG.twinkle.maxOpacity - CONFIG.twinkle.minOpacity;
+                    const twinkleFactor = CONFIG.twinkle.minOpacity + sharpWave * range;
+                    currentAlpha *= twinkleFactor;
+                }
+                
+                currentAlpha *= CONFIG.visuals.alphaFactor;
+
+                if (currentAlpha < 0.01) return;
+
+                if (CONFIG.visuals.globalAdditive) {
+                    ctx.globalCompositeOperation = 'lighter';
+                } else if (this.isTwinkler && CONFIG.visuals.twinkleAdditive) {
+                    // 仅在波峰高亮时启用叠加
+                    if (currentAlpha > 0.3) {
+                            ctx.globalCompositeOperation = 'lighter';
+                    } else {
+                            ctx.globalCompositeOperation = 'source-over';
+                    }
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+
+                ctx.globalAlpha = currentAlpha;
+                ctx.fillStyle = this.color;
+                
+                //  绘制指令优化：小颗粒用 fillRect，大颗粒用 arc
+                const drawX = forceX !== null ? forceX : this.x;
+                const drawY = forceY !== null ? forceY : this.y;
+                let s = baseParticleSize * scale;
+                s = Math.max(0.5, Math.min(s, baseParticleSize * 4)); 
+
+                if (s < 2) {
+                    // 小于2像素的点，直接画矩形，性能更好
+                    ctx.fillRect(drawX - s/2, drawY - s/2, s, s);
+                } else {
+                    // 大点保持圆形，视觉效果好
+                    ctx.beginPath();
+                    ctx.arc(drawX, drawY, s, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.globalCompositeOperation = 'source-over'; 
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // 修改核心：支持小数步长 (Density Control Logic Upgrade)
+        // 增加 font 逻辑
+        function sampleText(text, targetFontSize, colorType = 'gold', stepOverride = null) {
+            const tmpCanvas = document.createElement('canvas');
+            const tCtx = tmpCanvas.getContext('2d');
+            
+            // 字体动态判断
+            const fontFamily = (CONFIG.font.enabled && CONFIG.font.family) 
+                            ? CONFIG.font.family 
+                            : '"Microsoft YaHei", sans-serif';
+
+            tCtx.font = `bold ${targetFontSize}px ${fontFamily}`;
+            const measure = tCtx.measureText(text);
+            let finalSize = targetFontSize;
+            const maxW = width * 0.9; 
+            if (measure.width > maxW) finalSize = targetFontSize * (maxW / measure.width);
+            tmpCanvas.width = width;
+            tmpCanvas.height = height;
+            tCtx.font = `bold ${finalSize}px ${fontFamily}`;
+            tCtx.fillStyle = "white";
+            tCtx.textAlign = "center";
+            tCtx.textBaseline = "middle";
+            tCtx.fillText(text, width / 2, height / 2);
+            const idata = tCtx.getImageData(0, 0, width, height);
+            const data = idata.data;
+            const points = [];
+            
+            // 确定采样步长
+            let currentStep;
+            if (stepOverride) {
+                currentStep = stepOverride;
+            } else {
+                currentStep = isMobile ? CONFIG.density.introMobile : CONFIG.density.introDesktop;
+            }
+            
+            // 核心修改：使用 Math.floor 支持浮点数坐标采样
+            for (let y = 0; y < height; y += currentStep) {
+                for (let x = 0; x < width; x += currentStep) {
+                    // 将浮点坐标取整，映射到像素数组索引
+                    const inY = Math.floor(y);
+                    const inX = Math.floor(x);
+                    
+                    // 边界检查，防止小数累加导致的溢出
+                    if (inY >= height || inX >= width) continue;
+
+                    if (data[(inY * width + inX) * 4 + 3] > 128) {
+                        points.push({ x: inX, y: inY, colorType: colorType });
+                    }
+                }
+            }
+            return points;
+        }
+
+        // 高效的文字点阵获取函数 (源自 MyMath.literalLattice)
+        // 专门用于烟花文字，性能比 sampleText 更好，且只生成文字区域的点
+        function getTextLattice(text, fontSize) {
+            // 创建一个临时的离屏 canvas
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            // 字体动态判断
+            const fontFamily = (CONFIG.font.enabled && CONFIG.font.family) 
+                            ? CONFIG.font.family 
+                            : '"Microsoft YaHei", sans-serif';
+
+            // 1. 先设置字体来测量宽度
+            ctx.font = `bold ${fontSize}px ${fontFamily}`;
+            const measure = ctx.measureText(text);
+            const width = Math.ceil(measure.width);
+            const height = fontSize + 20; // 给一点高度冗余防止被截断
+
+            // 2. 调整 canvas 大小为文字实际大小
+            canvas.width = width;
+            canvas.height = height;
+
+            // 3. 重新设置字体 (调整大小后需要重设)
+            ctx.font = `bold ${fontSize}px ${fontFamily}`;
+            ctx.fillStyle = "#ffffff";
+            ctx.textBaseline = "middle";
+            ctx.textAlign = "left"; // 左对齐方便扫描
+
+            // 4. 绘制文字
+            ctx.fillText(text, 0, height / 2);
+
+            // 5. 获取像素数据
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const points = [];
+
+            // 6. 采样密度 (根据设备调整，手机稀疏一点)
+            // 对应 user config 中的 density 概念，但这里是局部采样
+            const density = isMobile ? 2 : 3;
+
+            for (let y = 0; y < height; y += density) {
+                for (let x = 0; x < width; x += density) {
+                    const i = (y * width + x) * 4;
+                    // alpha > 128 认为是文字部分
+                    if (data[i + 3] > 128) {
+                        points.push({ x: x, y: y });
+                    }
+                }
+            }
+
+            return {
+                width: width,
+                height: height,
+                points: points
+            };
+        }
+
+        function createFinalStage() {
+            isFinalState = true;
+            // 清空现有的
+            particles = []; staticTopParticles = []; carouselGroups = []; 
+            // 清空缓存相关
+            charParticleCache = {}; 
+            normalizedSecretText = "";
+
+            //  只显示原本被隐藏的按钮，但排除分享按钮(稍后交互后再显示)
+            const hiddenBtns = document.querySelectorAll('.initially-hidden');
+            hiddenBtns.forEach(btn => {
+                //  如果是分享按钮，先不显示；其他的立即显示
+                if (btn.id !== 'btn-share') {
+                    btn.classList.add('reveal-btn');
+                }
+            });
+            
+            //  显示戳戳屏幕提示
+            if (!hasTouchedInFinal) {
+                document.getElementById('touch-hint').style.opacity = 1;
+            }
+
+            let topY_Center = height * 0.15; 
+            let midY_Center = height * 0.30; 
+            let botY_Center = height * 0.45; 
+            
+            // 获取配置的字体大小
+            let titleSize = isMobile ? CONFIG.fontSizes.finalTitleMobile : CONFIG.fontSizes.finalTitleDesktop;
+            let nameSize = isMobile ? CONFIG.fontSizes.finalNameMobile : CONFIG.fontSizes.finalNameDesktop;
+            let yearSize = isMobile ? CONFIG.fontSizes.finalYearMobile : CONFIG.fontSizes.finalYearDesktop;
+            
+            // 获取 Final 阶段的密度
+            const finalStep = isMobile ? CONFIG.density.finalMobile : CONFIG.density.finalDesktop;
+
+            const p1 = sampleText("祝", titleSize, 'red', finalStep);
+            const p2 = sampleText(userName, nameSize, 'gold', finalStep);
+            const p3 = sampleText("2026", yearSize, 'gold', finalStep);
+
+            [...p1, ...p2, ...p3].forEach(p => {
+                let part = new Particle(width/2, height/2);
+                let targetY = 0;
+                if (p1.includes(p)) targetY = p.y - (height/2) + topY_Center;
+                else if (p2.includes(p)) targetY = p.y - (height/2) + midY_Center;
+                else targetY = p.y - (height/2) + botY_Center;
+                part.tx = p.x; part.ty = targetY;
+                let cType = 'gold'; if (p1.includes(p)) cType = 'red';
+                part.color = getRandomColor(cType);
+                part.x = width/2 + (Math.random()-0.5) * 300; 
+                part.y = height/2 + (Math.random()-0.5) * 300;
+                staticTopParticles.push(part);
+            });
+
+            // ====== 1. 生成正常模式圆环 (Normal Ring) ======
+            let carouselSize = isMobile ? CONFIG.fontSizes.carouselMobile : CONFIG.fontSizes.carouselDesktop;
+            let list = CONFIG.carouselTexts;
+            
+            // 记录正常圆环的半径，用于后续计算速度补偿
+            // 正常圆环半径是基于配置的比例
+            normalRingRadius = isMobile ? width * CONFIG.carouselRadiusRatioMobile : width * CONFIG.carouselRadiusRatioDesktop;
+
+            let angleStep = (Math.PI * 2) / list.length;
+            
+            list.forEach((text, index) => {
+                const points = sampleText(text, carouselSize, 'rainbow', finalStep);
+                let group = {
+                    baseAngle: -index * angleStep,
+                    parts: []
+                };
+                points.forEach(p => {
+                    let part = new Particle(width/2, height + 200);
+                    part.relX = -(p.x - width / 2); 
+                    part.relY = p.y - height / 2;
+                    part.x = (Math.random()-0.5) * width * 1.5; 
+                    part.y = height + 200;
+                    part.color = getRandomColor('rainbow');
+                    group.parts.push(part);
+                });
+                carouselGroups.push(group);
+            });
+
+            // ====== 2. 预处理隐藏模式圆环数据 (Secret Ring) - 虚拟卷轴逻辑 ======
+            if (secretMessageText) {
+                // 读取配置
+                const secretSize = isMobile ? CONFIG.secret.font.sizeMobile : CONFIG.secret.font.sizeDesktop;
+                
+                // 确定槽位数量（圆环一圈显示的字数）
+                secretSlotCount = isMobile ? CONFIG.secret.ring.slotsMobile : CONFIG.secret.ring.slotsDesktop;
+                
+                // 确定物理半径
+                const radiusRatio = isMobile ? CONFIG.secret.ring.radiusMobile : CONFIG.secret.ring.radiusDesktop;
+                secretRingRadius = width * radiusRatio;
+
+                // 标准化文本：如果字数少于槽位数，则重复拼接，直到填满一圈
+                normalizedSecretText = secretMessageText;
+                while (normalizedSecretText.length < secretSlotCount) {
+                    normalizedSecretText += secretMessageText;
+                }
+
+                // 缓存字符粒子数据
+                // 遍历每一个唯一字符，生成点阵数据存入缓存
+                for (let char of normalizedSecretText) {
+                    if (!charParticleCache[char]) {
+                        const lattice = getTextLattice(char, secretSize);
+                        const centerX = lattice.width / 2;
+                        const centerY = lattice.height / 2;
+                        
+                        const charParticles = [];
+                        lattice.points.forEach(p => {
+                            let part = new Particle(width/2, height + 200); // 初始位置无关紧要，渲染时会重算
+                            // 计算相对于文字中心的偏移
+                            part.relX = -(p.x - centerX); 
+                            part.relY = p.y - centerY;
+                            part.color = getRandomColor('rainbow');
+                            charParticles.push(part);
+                        });
+                        charParticleCache[char] = charParticles;
+                    }
+                }
+            }
+        }
+
+        function updateMainText(text) {
+            let size = isMobile ? CONFIG.fontSizes.introMobile : CONFIG.fontSizes.introDesktop;
+            // 如果名字太长，自动缩小一点
+            if(text.length > 4) size *= 0.7;
+            
+            const introStep = isMobile ? CONFIG.density.introMobile : CONFIG.density.introDesktop;
+            const points = sampleText(text, size, 'gold', introStep);
+            
+            if (particles.length < points.length) {
+                for(let i=0; i<points.length-particles.length; i++) particles.push(new Particle(width/2, height/2));
+            } else {
+                for(let i=points.length; i<particles.length; i++) particles[i].alpha = 0;
+            }
+            
+            let targetColorMode = CONFIG.textColors.initialMode;
+            if (CONFIG.textColors.randomize) {
+                const modes = ['gold', 'red', 'rainbow', 'white'];
+                targetColorMode = modes[Math.floor(Math.random() * modes.length)];
+            }
+
+            points.sort(() => Math.random()-0.5);
+            particles.forEach((p, i) => {
+                if (i < points.length) {
+                    p.tx = points[i].x; 
+                    p.ty = points[i].y; 
+                    p.alpha = 1; 
+                    p.color = getRandomColor(targetColorMode);
+                }
+            });
+        }
+
+        function startShow() {
+            const input = document.getElementById('nameInput');
+            if (!input.value) return;
+            
+            //  用户交互触发音频解锁 (iOS/Chrome 策略要求)
+            soundManager.resume();
+            
+            //  开始播放背景音乐
+            bgmManager.play();
+
+            userName = input.value;
+            document.getElementById('ui-layer').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('ui-layer').style.display = 'none';
+                document.getElementById('hint').style.opacity = 1;
+            }, 500);
+            updateMainText(userName);
+            
+            // 绑定点击和拖拽事件
+            window.addEventListener('mousedown', handleDragStart);
+            window.addEventListener('mousemove', handleDragMove);
+            window.addEventListener('mouseup', handleDragEnd);
+
+            window.addEventListener('touchstart', handleDragStart, {passive: false});
+            window.addEventListener('touchmove', handleDragMove, {passive: false});
+            window.addEventListener('touchend', handleDragEnd);
+
+            animate();
+        }
+
+        function explodeAndSwitch(nextText) {
+            let targets = isFinalState ? staticTopParticles : particles;
+            targets.forEach(p => {
+                let dx = p.x - width/2; let dy = p.y - height/2;
+                p.tx += dx * 0.8; p.ty += dy * 0.8;
+            });
+            setTimeout(() => {
+                if (nextText === "FINAL") createFinalStage(); else updateMainText(nextText);
+            }, 300);
+        }
+
+        // ===============================================
+        // ====== 烟花逻辑 (Fireworks Logic) ======
+        // ===============================================
+
+        // 创建尾烟粒子
+        function createSmoke(x, y) {
+            if (!CONFIG.fireworks.smoke.enabled) return;
+            
+            const size = isMobile ? CONFIG.fireworks.smoke.sizeMobile : CONFIG.fireworks.smoke.sizeDesktop;
+            smokeParticles.push({
+                x: x + (Math.random() - 0.5) * CONFIG.fireworks.smoke.jitter * 5,
+                y: y,
+                size: size,
+                alpha: 0.5, // 初始透明度
+                vx: (Math.random() - 0.5) * 0.3, // 轻微飘动
+                vy: (Math.random() * 0.5),       // 轻微下沉
+                decay: CONFIG.fireworks.smoke.decaySpeed
+            });
+        }
+
+        // 更新并绘制尾烟
+        function updateAndDrawSmoke() {
+            if (!CONFIG.fireworks.smoke.enabled) return;
+
+            ctx.fillStyle = `rgba(${CONFIG.fireworks.smoke.color}, 1)`;
+            
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                let s = smokeParticles[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.alpha -= s.decay;
+                
+                if (s.alpha <= 0) {
+                    smokeParticles.splice(i, 1);
+                    continue;
+                }
+                
+                ctx.globalAlpha = s.alpha;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function launchFirework(targetX, targetY) {
+            // 触发发射音效 (lift)
+            soundManager.playSound('lift', 1);
+
+            // 发射一个“火箭”
+            const speed = isMobile ? CONFIG.fireworks.launchSpeedMobile : CONFIG.fireworks.launchSpeedDesktop;
+            fireworks.push({
+                x: targetX, // 从点击的X轴正下方发射 (初始X)
+                baseX: targetX, // 记录基准线，用于计算抖动
+                y: height,  // 屏幕底部
+                tx: targetX,
+                ty: targetY,
+                speed: speed,
+                color: getRandomColor('rainbow'), // 随机颜色
+                wobblePhase: Math.random() * Math.PI * 2, // 初始抖动相位
+                tick: 0 // 用于控制尾烟生成频率
+            });
+        }
+
+        // 爆炸逻辑 - 支持图案和文字
+        function createExplosion(x, y, color) {
+            // 1. 判断是否触发文字烟花 (概率触发)
+            const textCfg = CONFIG.fireworks.textFireworks;
+            if (textCfg.enabled && Math.random() < textCfg.probability) {
+                createWordExplosion(x, y);
+                return; // ★ 如果是文字烟花，就不要再产生普通火花了
+            }
+
+            // 2. 如果不是文字，则使用几何图案爆炸
+            const count = isMobile ? CONFIG.fireworks.explosionCountMobile : CONFIG.fireworks.explosionCountDesktop;
+            const scaleMul = isMobile ? CONFIG.fireworks.patterns.scaleMobile : CONFIG.fireworks.patterns.scaleDesktop;
+            
+            //  触发普通爆炸音效 (burst)
+            // 根据 scaleMul 调整音调。scaleMul 越大，scale 越大，声音越低沉。
+            // 这里将 scaleMul 归一化到 0.8~1.2 左右传给 playSound
+            soundManager.playSound('burst', isMobile ? scaleMul / 1.5 : scaleMul / 2.0);
+
+            // 决定当前这个烟花的形状
+            let patternType = 'sphere'; // 默认圆形
+            if (CONFIG.fireworks.patterns.enabled) {
+                const r = Math.random();
+                if (r < 0.5) patternType = 'sphere';        // 50% 正常圆形
+                else if (r < 0.75) patternType = 'ring';    // 25% 环形
+                else patternType = 'burst';                 // 25% 炸裂星形
+            }
+
+            for (let i = 0; i < count; i++) {
+                let angle, speed;
+
+                if (patternType === 'ring') {
+                    // 环形：角度随机，速度固定
+                    angle = Math.random() * Math.PI * 2;
+                    speed = CONFIG.fireworks.explosionForce * 0.8 * scaleMul; // 环形稍微整齐点
+                } else if (patternType === 'burst') {
+                    // 星形：分几束
+                    const arms = 8;
+                    const armAngle = (Math.PI * 2) / arms;
+                    const fuzzy = (Math.random() - 0.5) * 0.5; // 稍微散开点
+                    const baseAngle = Math.floor(Math.random() * arms) * armAngle;
+                    angle = baseAngle + fuzzy;
+                    speed = Math.random() * CONFIG.fireworks.explosionForce * 1.2 * scaleMul;
+                } else {
+                    // 默认球形：完全随机
+                    angle = Math.random() * Math.PI * 2;
+                    speed = Math.random() * CONFIG.fireworks.explosionForce * scaleMul;
+                }
+
+                sparks.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    decay: CONFIG.fireworks.decayMin + Math.random() * (CONFIG.fireworks.decayMax - CONFIG.fireworks.decayMin), 
+                    color: color,
+                    isText: false // 标记这不是文字粒子
+                });
+            }
+        }
+
+        //  文字爆炸逻辑 -：由中心向外炸开 (使用移植的 getTextLattice 算法)
+        function createWordExplosion(cx, cy) {
+            // 触发文字烟花音效 (burstSmall)
+            // 文字烟花通常密集，使用节流的 burstSmall
+            soundManager.playSound('burstSmall', 1.0);
+
+            const cfg = CONFIG.fireworks.textFireworks;
+            const word = cfg.words[Math.floor(Math.random() * cfg.words.length)];
+            
+            // 字体大小 (可以稍微大一点，因为离屏 Canvas 不受屏幕限制)
+            const fontSize = isMobile ? 60 : 100; 
+            
+            //  使用新函数获取点阵，替换原来的 sampleText 调用
+            // 这里的 lattice 包含 {width, height, points: [{x,y}]}
+            const lattice = getTextLattice(word, fontSize);
+            
+            //  确定文字颜色 - 保证单字纯色
+            let explosionColor = 'hsl(45, 100%, 60%)'; // 默认金
+            if (cfg.colorMode === 'random') {
+                // 随机取一个彩虹色，但全字统一
+                explosionColor = getRandomColor('rainbow');
+            } else if (cfg.colorMode === 'fixed') {
+                explosionColor = `rgb(${cfg.fixedColor})`;
+            } else {
+                // 'gold'
+                explosionColor = getRandomColor('gold');
+            }
+
+            // 获取炸开力度比例
+            const scaleForce = isMobile ? cfg.explosionScaleMobile : cfg.explosionScaleDesktop;
+
+            // 计算中心偏移量，让文字在 cx, cy 处居中炸开
+            const centerX = lattice.width / 2;
+            const centerY = lattice.height / 2;
+
+            lattice.points.forEach(p => {
+                // p.x, p.y 是在小 canvas 里的坐标
+                // 需要计算相对于文字中心的偏移
+                const relX = p.x - centerX;
+                const relY = p.y - centerY;
+                
+                sparks.push({
+                    x: cx, 
+                    y: cy,
+                    // 速度 = 距离 * 系数。这样远的粒子飞得快，近的飞得慢，最终同时到达形状
+                    // 0.08 是个经验系数，让它炸得自然点
+                    vx: relX * scaleForce * 0.08, 
+                    vy: relY * scaleForce * 0.08,
+                    alpha: 1,
+                    decay: cfg.decaySpeed, // 文字消失得慢一点
+                    color: explosionColor, // 使用统一颜色
+                    isText: true, // 标记为文字粒子
+                    size: isMobile ? cfg.particleSizeMobile : cfg.particleSizeDesktop
+                });
+            });
+        }
+
+        function updateAndDrawFireworks() {
+            //  先画尾烟，让它在火花下面
+            updateAndDrawSmoke();
+
+            // 1. 更新上升的烟花
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                let fw = fireworks[i];
+                fw.y -= fw.speed;
+                
+                //  计算飞行抖动 (S型上升)
+                fw.wobblePhase += 0.15; // 抖动频率
+                const wobbleOffset = Math.sin(fw.wobblePhase) * CONFIG.fireworks.ascentWobble;
+                const currentX = fw.baseX + wobbleOffset;
+                fw.x = currentX;
+
+                // 生成尾烟
+                fw.tick++;
+                if (fw.tick % CONFIG.fireworks.smoke.interval === 0) {
+                    createSmoke(currentX, fw.y + 10); // 在火箭尾部生成
+                }
+
+                // 绘制拖尾
+                ctx.beginPath();
+                // 拖尾也稍微带点抖动感
+                ctx.moveTo(currentX, fw.y + fw.speed * 1.5);
+                ctx.lineTo(currentX, fw.y);
+                ctx.strokeStyle = fw.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 到达目标高度？爆炸！
+                if (fw.y <= fw.ty) {
+                    createExplosion(fw.baseX, fw.y, fw.color); // 在基准X处爆炸，防止偏离
+                    fireworks.splice(i, 1);
+                }
+            }
+
+            // 2. 更新爆炸的火花
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                let s = sparks[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                
+                // 文字粒子受重力影响小一点，否则字会沉下去
+                if (s.isText) {
+                      s.vy += CONFIG.fireworks.gravity * 0.3; 
+                      s.vx *= 0.92; // 文字粒子阻力大，为了保持形状
+                      s.vy *= 0.92;
+                } else {
+                      s.vy += CONFIG.fireworks.gravity; 
+                      s.vx *= CONFIG.fireworks.friction; 
+                      s.vy *= CONFIG.fireworks.friction;
+                }
+                
+                s.alpha -= s.decay;
+
+                if (s.alpha <= 0) {
+                    sparks.splice(i, 1);
+                } else {
+                    ctx.globalAlpha = s.alpha;
+                    ctx.fillStyle = s.color;
+                    ctx.beginPath();
+                    // 文字粒子大小可控，普通粒子用原来的大小
+                    let pSize = s.isText ? s.size : (isMobile ? 1.5 : 2);
+                    ctx.arc(s.x, s.y, pSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1; // 恢复
+        }
+
+        // ===============================================
+        // ====== UI 交互逻辑 ======
+        // ===============================================
+
+        function toggleAutoFire() {
+            const btn = document.getElementById('btn-auto');
+            if (isAutoFiring) {
+                isAutoFiring = false;
+                btn.innerText = "自动放烟花: 关";
+                btn.classList.remove('active');
+                clearTimeout(autoFireTimer);
+            } else {
+                isAutoFiring = true;
+                btn.innerText = "自动放烟花: 开";
+                btn.classList.add('active');
+                scheduleNextFirework();
+            }
+        }
+
+        function scheduleNextFirework() {
+            if (!isAutoFiring) return;
+            const delay = CONFIG.ui.autoFire.minInterval + Math.random() * (CONFIG.ui.autoFire.maxInterval - CONFIG.ui.autoFire.minInterval);
+            autoFireTimer = setTimeout(() => {
+                if (!isAutoFiring) return;
+                
+                //  支持并发 (一次放好几个)
+                const burstCount = Math.floor(Math.random() * CONFIG.ui.autoFire.maxConcurrent) + 1;
+                
+                for(let k=0; k<burstCount; k++) {
+                    const targetX = width * 0.1 + Math.random() * width * 0.8;
+                    const targetY = height * 0.1 + Math.random() * height * 0.4; // 偏上方炸
+                    launchFirework(targetX, targetY);
+                }
+                
+                scheduleNextFirework();
+            }, delay);
+        }
+
+        function reloadPage() {
+            location.reload();
+        }
+
+        function goBlog() {
+            window.location.href = CONFIG.ui.blogUrl;
+        }
+
+        // 音量 UI 交互函数 - 控制竖向面板显示
+        function toggleVolumePanel() {
+            const panel = document.getElementById('volume-panel-vertical');
+            panel.classList.toggle('show');
+        }
+
+        function updateBgmVolume(val) {
+            CONFIG.music.volume = parseFloat(val);
+            bgmManager.setVolume(CONFIG.music.volume);
+        }
+
+        function updateSfxVolume(val) {
+            CONFIG.sound.volume = parseFloat(val);
+            // 顺便如果音量大于0，开启音效 enabled，否则关闭，优化性能
+            CONFIG.sound.enabled = (CONFIG.sound.volume > 0.01);
+        }
+
+        // ===============================================
+        // ======  留言分享相关逻辑 (SHARE LOGIC)  ======
+        // ===============================================
+        function openShareModal() {
+            const overlay = document.getElementById('share-overlay');
+            overlay.classList.add('show');
+            
+            // 清空之前的输入和结果
+            document.getElementById('share-name-input').value = "";
+            document.getElementById('share-msg-input').value = "";
+            document.getElementById('share-link-output').value = "";
+            document.getElementById('share-result').style.display = 'none';
+        }
+
+        function closeShareModal() {
+            document.getElementById('share-overlay').classList.remove('show');
+        }
+
+        function generateShareLink() {
+            const nameVal = document.getElementById('share-name-input').value.trim();
+            const msgVal = document.getElementById('share-msg-input').value.trim();
+            
+            const baseUrl = CONFIG.ui.share.baseUrl;
+            const paramNameA = CONFIG.ui.share.paramName;
+            const paramNameM = CONFIG.secret.paramNameMsg;
+            
+            // 检查 LZString 是否加载
+            if (typeof LZString === 'undefined') {
+                alert("资源库加载中，请稍后再试...");
+                return;
+            }
+
+            let params = [];
+
+            // 1. 压缩名字
+            if (nameVal) {
+                try {
+                    const compressedName = LZString.compressToEncodedURIComponent(nameVal);
+                    params.push(`${paramNameA}=${compressedName}`);
+                } catch (e) { console.error("Name Compression Failed", e); }
+            }
+
+            // 2. 压缩密语
+            if (msgVal) {
+                try {
+                    const compressedMsg = LZString.compressToEncodedURIComponent(msgVal);
+                    params.push(`${paramNameM}=${compressedMsg}`);
+                } catch (e) { console.error("Msg Compression Failed", e); }
+            }
+
+            // 3. 拼接链接
+            let finalLink = baseUrl;
+            if (params.length > 0) {
+                const separator = baseUrl.includes('?') ? '&' : '?';
+                finalLink = `${baseUrl}${separator}${params.join('&')}`;
+            }
+
+            // 显示结果到文本框
+            const outputEl = document.getElementById('share-link-output');
+            outputEl.value = finalLink;
+            document.getElementById('share-result').style.display = 'block';
+            
+            // 自动全选文本，方便复制
+            outputEl.select();
+            outputEl.setSelectionRange(0, 99999); // 兼容移动端
+        }
+
+        // ===============================================
+        // ====== 惯性拖拽与点击逻辑 (Interactive) ======
+        // ===============================================
+        
+        // 统一获取 X 坐标
+        function getClientX(e) {
+            return e.touches ? e.touches[0].clientX : e.clientX;
+        }
+
+        // 获取 Y 坐标 (用于误触判断)
+        function getClientY(e) {
+            return e.touches ? e.touches[0].clientY : e.clientY;
+        }
+
+        function handleDragStart(e) {
+            // 排除UI元素的点击 (包括新的弹窗相关)
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'INPUT' || 
+                e.target.tagName === 'TEXTAREA' ||
+                e.target.closest('.volume-container') || 
+                e.target.closest('#share-overlay')) return;
+
+            //  交互时尝试解锁 AudioContext
+            soundManager.resume();
+            bgmManager.resume();
+
+            // 如果是 Touch 事件，防止滚动
+            if (e.type === 'touchstart') {
+                 // 不阻止默认行为，可能会导致页面滚动，但在全屏 canvas 上通常需要 preventDefault
+                 // 不过为了兼容性，这里稍微宽容一点，只在 move 时阻止
+            }
+
+            const clientY = getClientY(e);
+            const safeZone = isMobile ? CONFIG.ui.safeZoneHeightMobile : CONFIG.ui.safeZoneHeightDesktop;
+            
+            // 如果点击在底部安全区内，直接忽略（不放烟花，不拖拽）
+            if (height - clientY < safeZone) return;
+
+            // 1. 如果是 Final 阶段，优先处理拖拽
+            if (isFinalState) {
+                dragState.isDragging = true;
+                dragState.startX = getClientX(e);
+                dragState.lastX = dragState.startX;
+                dragState.velocity = 0; // 重置速度
+            }
+            
+            // 2. 如果不是 Final 阶段，或者单纯点击，记录点击逻辑交给 handleClick (这里实际上可以合并)
+            if (!isFinalState) {
+                handleClickLogic(e);
+            }
+        }
+
+        function handleDragMove(e) {
+            if (!dragState.isDragging || !isFinalState) return;
+            e.preventDefault(); // 防止拖拽时页面滚动
+
+            const x = getClientX(e);
+            const delta = x - dragState.lastX;
+            dragState.lastX = x;
+
+            // 计算拖拽产生的速度 = 移动距离 * 灵敏度
+            // 注意：因为原本 logic 是 globalRotation -= speed，这里 delta > 0 (向右拖) 应该让 rotation 变小还是变大？
+            // 试一下：向右拖希望物体向右转 -> 顺时针 -> 角度减小？
+            // 通常 Canvas 3D 计算：x3d = p.relX * cosA + radius * sinA
+            // 调整符合直觉即可。这里设定：向右拖，物体跟着向右转。
+            
+            dragState.velocity = delta * CONFIG.interaction.inertia.dragSensitivity;
+        }
+
+        function handleDragEnd(e) {
+            if (isFinalState && dragState.isDragging) {
+                dragState.isDragging = false;
+                
+                // 判断是否是“点击”而非“拖拽”
+                // 如果移动距离很小，视为点击 -> 放烟花
+                const totalDist = Math.abs(dragState.lastX - dragState.startX);
+                if (totalDist < 10) {
+                      // 视为点击，放烟花
+                      // 需要获取结束时的坐标，touchEnd 没有 touches，changedTouches 有
+                      let clientX, clientY;
+                      if (e.changedTouches) {
+                          clientX = e.changedTouches[0].clientX;
+                          clientY = e.changedTouches[0].clientY;
+                      } else {
+                          clientX = e.clientX;
+                          clientY = e.clientY;
+                      }
+                      
+                      // 第一次点击隐藏提示
+                      if (!hasTouchedInFinal) {
+                        hasTouchedInFinal = true;
+                        document.getElementById('touch-hint').style.opacity = 0;
+
+                        // 仅当没有隐藏彩蛋时，才立即显示分享按钮
+                        // 如果有彩蛋，按钮会在 animate 函数中检测到解锁成功后显示
+                        if (!secretMessageText) {
+                            setTimeout(() => {
+                                const shareBtn = document.getElementById('btn-share');
+                                if (shareBtn) shareBtn.classList.add('reveal-btn');
+                            }, 500); 
+                        }
+                    }
+                    launchFirework(clientX, clientY);
+                }
+            }
+            dragState.isDragging = false;
+        }
+
+        // 原有点击逻辑的封装 (用于非 Final 阶段的场景切换)
+        let isAnimating = false;
+        function handleClickLogic(e) {
+            if (isAnimating) return;
+            isAnimating = true; step++;
+            document.getElementById('hint').style.opacity = 0;
+            if (step <= CONFIG.transitionTexts.length) {
+                explodeAndSwitch(CONFIG.transitionTexts[step-1]);
+                setTimeout(() => {
+                    isAnimating = false; document.getElementById('hint').style.opacity = 1;
+                }, 1800);
+            } else {
+                explodeAndSwitch("FINAL");
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            //  在清空画布后、绘制主要文字前，先画背景
+            // 这样背景永远在最后面，不会遮挡文字
+            updateAndDrawBackground();
+
+            // 绘制烟花（建议放在背景之上，文字之下，或者文字之上都可以）
+            // 这里放在文字层下面一点点，或者用 lighter 混合模式让它更亮
+            ctx.globalCompositeOperation = 'lighter';
+            updateAndDrawFireworks();
+            ctx.globalCompositeOperation = 'source-over'; 
+
+            if (!isFinalState) {
+                particles.forEach(p => { 
+                    p.update(); 
+                    if(p.alpha > 0.01) p.draw(1); 
+                });
+            } else {
+                staticTopParticles.forEach(p => { 
+                    p.update(); 
+                    p.draw(1); 
+                });
+
+                // --- 核心修改：惯性物理逻辑 ---
+                let currentAbsSpeed = 0;
+                
+                if (dragState.isDragging) {
+                    // 1. 拖拽中：直接应用拖拽速度，并覆盖基础自转
+                    // 这里为了手感，反向应用，因为 globalRotation 是 -=
+                    globalRotation -= dragState.velocity;
+                    currentAbsSpeed = Math.abs(dragState.velocity);
+                } else {
+                    // 2. 松手后：惯性 + 恢复
+
+                    // A. 应用摩擦力衰减
+                    dragState.velocity *= CONFIG.interaction.inertia.friction;
+
+                    // B. 速度归零判定
+                    if (Math.abs(dragState.velocity) < 0.0001) {
+                          dragState.velocity = 0;
+                    }
+
+                    // C. 应用旋转
+                    globalRotation += CONFIG.rotationSpeed; 
+                    globalRotation -= dragState.velocity; 
+
+                    // D. 计算当前绝对速度
+                    currentAbsSpeed = Math.abs(CONFIG.rotationSpeed - dragState.velocity);
+                }
+                
+                // ============================================
+                // ====== 秘密切换逻辑 (Switch Logic) ======
+                // ============================================
+                const touchHintEl = document.getElementById('touch-hint');
+                const switchThreshold = CONFIG.secret.thresholds.switch;
+                const hintThreshold = CONFIG.secret.thresholds.hint;
+                const stopThreshold = CONFIG.secret.thresholds.stop;
+
+                if (secretMessageText) {
+                    // 1. 检测是否触发切换 (速度极快 + 存在密语 + 当前是 NORMAL 状态)
+                    if (renderState === 'NORMAL' && currentAbsSpeed > switchThreshold) {
+                        // 切换到“揭晓中”状态
+                        renderState = 'REVEALING';
+                        
+                        // 速度补偿：缩小角速度，保持线速度恒定
+                        // 这样大圆环出现时就不会突然转得飞快
+                        if (!hasSwitchedRadius && secretRingRadius > 0 && normalRingRadius > 0) {
+                            const ratio = normalRingRadius / secretRingRadius;
+                            dragState.velocity *= ratio; // 补偿拖拽惯性
+                            // 标记已补偿，防止重复计算
+                            hasSwitchedRadius = true;
+                        }
+
+                        // 显示提示：不用转了
+                        if (hasTouchedInFinal) { 
+                            touchHintEl.innerText = CONFIG.secret.hints.slowDown;
+                            touchHintEl.style.opacity = 1;
+                        }
+                    } 
+                    // 2. 揭晓中状态：等待速度降下来
+                    else if (renderState === 'REVEALING') {
+                        // 如果速度已经很慢了（接近正常自转速度），则正式切换为 SECRET
+                        if (currentAbsSpeed < stopThreshold * 3) {
+                            renderState = 'SECRET';
+                            
+                            // 隐藏提示
+                            touchHintEl.style.opacity = 0;
+                            
+                            // 延迟一点显示分享按钮 (如果还没显示的话)
+                            const shareBtn = document.getElementById('btn-share');
+                            if (shareBtn && !shareBtn.classList.contains('reveal-btn')) {
+                                setTimeout(() => shareBtn.classList.add('reveal-btn'), 500);
+                            }
+                        }
+                    }
+                    // 3. 正常状态下的提示逻辑 (还未触发极速)
+                    else if (renderState === 'NORMAL' && hasTouchedInFinal) {
+                        if (currentAbsSpeed > hintThreshold) {
+                            touchHintEl.innerText = CONFIG.secret.hints.faster;
+                            touchHintEl.style.opacity = 1;
+                        } else {
+                            touchHintEl.innerText = CONFIG.secret.hints.start;
+                            touchHintEl.style.opacity = 1;
+                        }
+                    }
+                }
+
+                // ============================================
+
+                // 根据当前显示的是普通圆环还是巨型圆环，决定半径
+                // 只有完全进入 REVEALING 或 SECRET 状态，且确实有隐藏词组，才使用巨型半径
+                const shouldUseSecretRadius = (renderState !== 'NORMAL' && normalizedSecretText.length > 0);
+                
+                let currentRadius = 0;
+                if (shouldUseSecretRadius) {
+                    currentRadius = secretRingRadius;
+                } else {
+                    currentRadius = isMobile ? width * CONFIG.carouselRadiusRatioMobile : width * CONFIG.carouselRadiusRatioDesktop;
+                }
+                
+                const targetCenterRatio = isMobile ? CONFIG.centerYMobile : CONFIG.centerYDesktop;
+                const centerY = height * targetCenterRatio; 
+                const fov = isMobile ? CONFIG.fovMobile : CONFIG.fovDesktop;
+                const tiltFactor = isMobile ? CONFIG.tiltFactorMobile : CONFIG.tiltFactorDesktop;
+
+                renderQueue = [];
+
+                if (shouldUseSecretRadius) {
+                    // ====== 虚拟卷轴渲染逻辑 (Virtual Scroll Logic) ======
+                    // 1. 计算每个槽位的角度步长
+                    const slotAngleStep = (Math.PI * 2) / secretSlotCount;
+                    
+                    // 2. 计算当前滚动的偏移量 (将 globalRotation 转换为槽位索引偏移)
+                    // globalRotation 是连续的弧度。我们需要知道它转过了多少个 slotAngleStep。
+                    // 注意方向：globalRotation 增加代表逆时针旋转。
+                    
+                    // 计算总偏移角度 (归一化到 0 ~ 2PI 之外也行，反正我们取模)
+                    // 使用 floor 确保平滑过渡，保留小数部分做微调
+                    const totalOffsetSteps = globalRotation / slotAngleStep;
+                    
+                    const indexShift = Math.floor(totalOffsetSteps);
+                    const fineTuneAngle = (totalOffsetSteps - indexShift) * slotAngleStep;
+
+                    // 3. 遍历每一个物理槽位 (0 到 N-1)
+                    for (let i = 0; i < secretSlotCount; i++) {
+                        // 计算该槽位当前应该显示的字符索引
+                        // 注意处理负数取模的问题
+                        let charIndex = (indexShift - i) % normalizedSecretText.length;
+                        if (charIndex < 0) charIndex += normalizedSecretText.length;
+                        
+                        const char = normalizedSecretText[charIndex];
+                        const particles = charParticleCache[char]; // 从缓存取点阵
+
+                        if (particles) {
+                            // 计算该槽位的物理基础角度
+                            // 注意：加上 fineTuneAngle 是为了让字在槽位之间平滑滑动
+                            const angle = i * slotAngleStep + fineTuneAngle;
+                            
+                            const cosA = Math.cos(angle);
+                            const sinA = Math.sin(angle);
+
+                            particles.forEach(p => {
+                                p.update(); 
+                                
+                                // 3D 投影逻辑 (Standard Cylinder Projection)
+                                const x3d = p.relX * cosA + currentRadius * sinA;
+                                const z3d = -p.relX * sinA + currentRadius * cosA;
+                                const scale = fov / (fov + z3d);
+                                const screenX = width / 2 + x3d * scale;
+                                const screenY = centerY + (p.relY * scale) - (z3d * tiltFactor * scale);
+                                
+                                // Alpha 渐变逻辑 - 引入 fadePower
+                                let progress = (currentRadius * 1.1 - z3d) / (2 * currentRadius * 1.1);
+                                progress = Math.max(0, Math.min(1, progress));
+                                let alpha = Math.pow(progress, CONFIG.secret.fadePower); 
+
+                                if (scale > 0.1 && alpha > 0.005) {
+                                     renderQueue.push({
+                                         particle: p,
+                                         scale: scale,
+                                         x: screenX,
+                                         y: screenY,
+                                         alpha: alpha,
+                                         z: z3d
+                                     });
+                                }
+                            });
+                        }
+                    }
+
+                } else {
+                    // ====== 原有的固定圆环渲染逻辑 (Normal Ring Logic) ======
+                    carouselGroups.forEach(group => {
+                        const angle = group.baseAngle + globalRotation;
+                        const cosA = Math.cos(angle);
+                        const sinA = Math.sin(angle);
+
+                        group.parts.forEach(p => {
+                            p.update(); 
+                            
+                            // 核心 3D 投影逻辑
+                            const x3d = p.relX * cosA + currentRadius * sinA;
+                            const z3d = -p.relX * sinA + currentRadius * cosA;
+                            const scale = fov / (fov + z3d);
+                            const screenX = width / 2 + x3d * scale;
+                            const screenY = centerY + (p.relY * scale) - (z3d * tiltFactor * scale);
+                            
+                            // Alpha 渐变逻辑
+                            let progress = (currentRadius * 1.1 - z3d) / (2 * currentRadius * 1.1);
+                            progress = Math.max(0, Math.min(1, progress));
+                            let alpha = Math.pow(progress, CONFIG.secret.fadePower); 
+
+                            if (scale > 0.1 && alpha > 0.005) {
+                                 renderQueue.push({
+                                     particle: p,
+                                     scale: scale,
+                                     x: screenX,
+                                     y: screenY,
+                                     alpha: alpha,
+                                     z: z3d
+                                 });
+                            }
+                        });
+                    });
+                }
+
+                // 移除排序，因为 lighter 混合模式下绘制顺序不影响结果
+                renderQueue.forEach(item => {
+                    item.particle.draw(item.scale, item.x, item.y, item.alpha);
+                });
+            }
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
